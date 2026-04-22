@@ -1,0 +1,91 @@
+# .github/workflows/pipeline.yml
+
+Name: Behind the Chapter Pipeline
+
+
+
+On:
+
+  Pull_request:
+
+    Types: [opened, synchronize]
+
+  Workflow_dispatch:
+
+    Inputs:
+
+      Input_path:
+
+        Description: ‘Path to research input’
+
+        Required: true
+
+        Default: ‘input/research-note.md’
+
+
+
+Jobs:
+
+  Cognitive-pipeline:
+
+    Runs-on: ubuntu-latest
+
+    Timeout-minutes: 30
+
+    
+
+    Services:
+
+      Redis:
+
+        Image: redis:7-alpine
+
+        Ports: [6379:6379]
+
+    
+
+    Steps:
+
+-	Uses: actions/checkout@v4
+
+      
+
+-	Name: Setup Node
+
+
+
+        Uses: actions/setup-node@v4
+
+        With: { node-version: ‘18’, cache: ‘npm’ }
+
+      
+
+-	Name: Install dependencies
+
+        Run: npm ci
+
+        
+
+-	Name: Run orchestrator
+
+        Env:
+
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+          PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
+
+          WORDPRESS_APP_PASSWORD: ${{ secrets.WORDPRESS_APP_PASSWORD }}
+
+        Run: node src/orchestrator.js –pr ${{ github.event.pull_request.number }}
+
+        
+
+-	Name: Upload artifacts
+
+        Uses: actions/upload-artifact@v4
+
+        With:
+
+          Name: pipeline-output
+
+          Path: output/
